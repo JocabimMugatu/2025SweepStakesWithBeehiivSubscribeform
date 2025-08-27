@@ -1,0 +1,27 @@
+## Netlify configuration for the FSU raffle sweepstakes site.
+#
+# This file tells Netlify where to find your static assets, how to route API
+# requests to serverless functions, and which directory holds your functions.
+
+[build]
+  # There is no build step for this project since it relies on a static HTML file
+  # powered by React loaded from a CDN. Leaving the command empty tells
+  # Netlify to skip running a build.
+  command = "# no build command"
+
+  # Netlify will deploy the contents of this folder as your website. The
+  # index.html file lives at the root of the repo so we publish the root.
+  publish = "."
+
+  # All serverless functions live in the netlify/functions folder. When you
+  # push to GitHub, Netlify will automatically build these into AWS Lambda
+  # functions.
+  functions = "netlify/functions"
+
+[[redirects]]
+  # Proxy all requests starting with /api/* to the corresponding serverless
+  # function. For example, a request to /api/checkout will be served by
+  # /.netlify/functions/checkout.
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

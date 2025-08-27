@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FSU Raffle Entry</title>
+    <!-- Load React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Simple Tailwind via CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for branded typography -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Beehiiv subscribe form embed script. This script enables the embedded subscribe form to auto-resize and function properly. -->
+    <script async src="https://subscribe-forms.beehiiv.com/embed.js"></script>
+  </head>
+  <body class="bg-[#f8f4f0] text-gray-900" style="font-family: 'Inter', sans-serif;">
+    <div id="root" class="max-w-6xl mx-auto p-4"></div>
+    <script type="text/babel">
+      // Data for the 2025 Florida State football schedule. Dates and opponents were
+      // gathered from ESPN's published schedule as of August 15 2025【839994044875525†L54-L133】.
+      const GAMES = [
+        { id: 'alabama', date: '2025‑08‑30', opponent: 'Alabama', home: true },
+        { id: 'etam', date: '2025‑09‑06', opponent: 'East Texas A&M', home: true },
+        { id: 'kent', date: '2025‑09‑20', opponent: 'Kent State', home: true },
+        { id: 'virginia', date: '2025‑09‑26', opponent: 'Virginia', home: false },
+        { id: 'miami', date: '2025‑10‑04', opponent: 'Miami', home: true },
+        { id: 'pittsburgh', date: '2025‑10‑11', opponent: 'Pittsburgh', home: true },
+        { id: 'stanford', date: '2025‑10‑18', opponent: 'Stanford', home: false },
+        { id: 'wake', date: '2025‑11‑01', opponent: 'Wake Forest', home: true },
+        { id: 'clemson', date: '2025‑11‑08', opponent: 'Clemson', home: false },
+        { id: 'vt', date: '2025‑11‑15', opponent: 'Virginia Tech', home: true },
+        { id: 'ncstate', date: '2025‑11‑21', opponent: 'NC State', home: false },
+        { id: 'florida', date: '2025‑11‑29', opponent: 'Florida', home: false },
+      ];
+
+      // Pricing configuration according to user requirements: single entry $4.99,
+      // triple entry $8.50, quintuple (5×) entry $11.11. 0 indicates no entry.
+      const PRICE_PER_GAME = {
+        0: 0,
+        1: 4.99,
+        3: 8.5,
+        5: 11.11,
+      };
+      // Season pass price providing one entry per game【839994044875525†L54-L133】.
+      const SEASON_PASS_PRICE = 49.97;
+
+      // Helper for formatting currency
+      const money = (n) => `$${n.toFixed(2)}`;
+
+      function App() {
+        const [seasonPass, setSeasonPass] = React.useState(false);
+        // quantities keyed by game id; values are 0,1,3 or 5 representing entries
+        const [quantities, setQuantities] = React.useState(() => {
+          const initial = {};
+          GAMES.forEach((g) => {
+            initial[g.id] = 0;
+          });
+          return initial;
+        });
+
+        // Toggle season pass: when enabled, set all games to 1 entry; disable resets to 0
+        const applySeasonPass = (enabled) => {
+          setSeasonPass(enabled);
+          setQuantities((prev) => {
+            const next = { ...prev };
+            GAMES.forEach((g) => {
+              next[g.id] = enabled ? 1 : 0;
+            });
+            return next;
+          });
+        };
+
+        // Increment or decrement quantity for a given game. Allowed values differ
+        // depending on seasonPass state: with seasonPass, 1→3→5; without, 0→1→3→5.
+        const increment = (id, delta) => {
+          setQuantities((q) => {
+            const allowed = seasonPass ? [1, 3, 5] : [0, 1, 3, 5];
+            const cur = q[id] ?? (seasonPass ? 1 : 0);
+            const idx = allowed.indexOf(cur);
+            let newIndex = idx + (delta > 0 ? 1 : -1);
+            if (newIndex < 0) newIndex = 0;
+            if (newIndex >= allowed.length) newIndex = allowed.length - 1;
+            return { ...q, [id]: allowed[newIndex] };
+          });
+        };
+
+        // Compute per-game line items when not on season pass
+        const lineItems = React.useMemo(() => {
+          return GAMES.map((g) => {
+            const qty = quantities[g.id] || 0;
+            const price = PRICE_PER_GAME[qty];
+            return { ...g, qty, price, subtotal: price };
+          }).filter((li) => li.qty > 0);
+        }, [quantities]);
+
+        // Compute upgrade charges and totals when season pass selected
+        const upgradesTotal = React.useMemo(() => {
+          if (!seasonPass) return 0;
+          return GAMES.reduce((sum, g) => {
+            const qty = quantities[g.id] || 1;
+            // baseline is 1 entry price; upgrade is difference from baseline
+            const delta = Math.max(0, PRICE_PER_GAME[qty] - PRICE_PER_GAME[1]);
+            return sum + delta;
+          }, 0);
+        }, [seasonPass, quantities]);
+
+        // Total cost
+        const total = React.useMemo(() => {
+          if (seasonPass) return SEASON_PASS_PRICE + upgradesTotal;
+          return lineItems.reduce((s, li) => s + li.subtotal, 0);
+        }, [seasonPass, upgradesTotal, lineItems]);
+
+        // Total entries across all games
+        const totalEntries = React.useMemo(() => {
+          if (seasonPass) {
+            return GAMES.length + GAMES.reduce((sum, g) => {
+              const qty = quantities[g.id] || 1;
+              // Extra entries above baseline of 1 when season pass active
+              return sum + (qty === 3 ? 2 : qty === 5 ? 4 : 0);
+            }, 0);
+          }
+          return lineItems.reduce((sum, li) => sum + li.qty, 0);
+        }, [seasonPass, quantities, lineItems]);
+
+        return (
+          <div>
+            {/* Branded header: garnet background with gold lettering */}
+            <header className="mb-6 bg-[#782F40] text-[#CEB888] p-4 rounded-lg shadow">
+              <h1
+                className="text-3xl md:text-4xl font-semibold mb-1"
+                style={{ fontFamily: 'Oswald, sans-serif' }}
+              >
+                The Chief Brief — FSU Raffle
+              </h1>
+              <p className="text-sm md:text-base opacity-90">
+                Select your raffle entries per game or choose the season pass for all
+                games at a discount.
+              </p>
+            </header>
+
+            {/* Beehiiv subscription form: inserted directly beneath the header to encourage visitors to join The Chief Brief newsletter. */}
+            <div className="mb-6">
+              <iframe
+                src="https://subscribe-forms.beehiiv.com/406ff698-73b1-4c8d-9ab8-fccc25b5ea01"
+                className="beehiiv-embed"
+                data-test-id="beehiiv-embed"
+                frameBorder="0"
+                scrolling="no"
+                style={{
+                  width: '100%',
+                  height: '439px',
+                  margin: '0',
+                  borderRadius: '0',
+                  backgroundColor: 'transparent',
+                  boxShadow: '0 0 #0000',
+                  maxWidth: '100%',
+                }}
+              ></iframe>
+            </div>
+            {/* Season Pass toggle styled card */}
+            <div className="mb-6">
+              <div
+                className="flex items-center bg-white border-l-4 border-[#CEB888] p-4 rounded-lg shadow hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                onClick={() => applySeasonPass(!seasonPass)}
+              >
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-5 w-5 text-[#782F40] mr-3"
+                  checked={seasonPass}
+                  onChange={(e) => applySeasonPass(e.target.checked)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div>
+                  <span
+                    className="text-lg font-medium"
+                    style={{ fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    Season Pass — {money(SEASON_PASS_PRICE)}
+                  </span>
+                  {seasonPass && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Includes one entry per game. Additional entries on
+                      individual games incur only the upgrade cost.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Game list displayed as a responsive grid: 2 cards per row on medium screens */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {GAMES.map((game) => {
+                const qty = quantities[game.id] || (seasonPass ? 1 : 0);
+                return (
+                  <div
+                    key={game.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border-l-4 border-[#CEB888] p-4 rounded-lg shadow hover:shadow-lg transition-shadow duration-200"
+                  >
+                    <div className="flex-1 mb-3 sm:mb-0">
+                      <h3
+                        className="font-semibold text-lg"
+                        style={{ fontFamily: 'Oswald, sans-serif' }}
+                      >
+                        {game.date} — {game.opponent}
+                      </h3>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">
+                          {game.home ? 'Home' : 'Away'} game
+                        </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        className="flex items-center justify-center w-8 h-8 bg-[#CEB888] text-[#782F40] rounded-full font-bold"
+                        onClick={() => increment(game.id, -1)}
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center font-mono text-lg">
+                        {qty === 0 && !seasonPass ? '0' : qty}
+                      </span>
+                      <button
+                        className="flex items-center justify-center w-8 h-8 bg-[#782F40] text-[#CEB888] rounded-full font-bold"
+                        onClick={() => increment(game.id, 1)}
+                      >
+                        +
+                      </button>
+                      <div className="text-sm text-gray-600 ml-2">
+                        {seasonPass ? (
+                          <>
+                            Upgrade:{' '}
+                            <strong>
+                              {money(
+                                Math.max(
+                                  0,
+                                  PRICE_PER_GAME[qty] - PRICE_PER_GAME[1]
+                                )
+                              )}
+                            </strong>
+                          </>
+                        ) : (
+                          <>
+                            Price:{' '}
+                            <strong>{money(PRICE_PER_GAME[qty])}</strong>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Cart summary */}
+            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-[#782F40]">
+              <h2
+                className="text-xl md:text-2xl font-semibold mb-4"
+                style={{ fontFamily: 'Oswald, sans-serif' }}
+              >
+                Cart Summary
+              </h2>
+              <ul className="text-sm text-gray-700 mb-4 space-y-1">
+                {seasonPass && (
+                  <li className="flex justify-between">
+                    <span>Season Pass</span>
+                    <span>{money(SEASON_PASS_PRICE)}</span>
+                  </li>
+                )}
+                {seasonPass && (
+                  <li className="flex justify-between">
+                    <span>Upgrades</span>
+                    <span>{money(upgradesTotal)}</span>
+                  </li>
+                )}
+                {!seasonPass &&
+                  lineItems.map((li) => (
+                    <li
+                      key={li.id}
+                      className="flex justify-between border-b border-gray-100 pb-1 last:pb-0 last:border-b-0"
+                    >
+                      <span>
+                        {li.opponent} ({li.qty}×)
+                      </span>
+                      <span>{money(li.price)}</span>
+                    </li>
+                  ))}
+              </ul>
+              <div className="flex justify-between font-bold text-lg mb-4">
+                <span>Total ({totalEntries} entries)</span>
+                <span>{money(total)}</span>
+              </div>
+              {/* Placeholder checkout button; integrate with Stripe checkout server-side */}
+              <button
+                className="mt-2 w-full bg-[#782F40] hover:bg-[#5e2232] text-[#CEB888] py-3 rounded-md font-semibold transition-colors duration-150"
+                onClick={async () => {
+                  // When the user clicks Checkout, build the list of line items and call
+                  // our Netlify serverless function. The function will return a URL to
+                  // Stripe's hosted checkout page, which we redirect to.
+                  if (total <= 0) {
+                    alert('Please select at least one entry before checking out.');
+                    return;
+                  }
+                  // Build array of items for the checkout session. Prices must be in cents.
+                  const items = [];
+                  if (seasonPass) {
+                    // Add season pass as a single item
+                    items.push({
+                      name: 'Season Pass (includes one entry per game)',
+                      price: Math.round(SEASON_PASS_PRICE * 100),
+                      quantity: 1,
+                    });
+                    // Add upgrades for each game (difference from baseline price)
+                    GAMES.forEach((g) => {
+                      const qty = quantities[g.id] || 1;
+                      const upgradeCost = Math.max(
+                        0,
+                        PRICE_PER_GAME[qty] - PRICE_PER_GAME[1]
+                      );
+                      if (upgradeCost > 0) {
+                        items.push({
+                          name: `Upgrade: ${g.opponent} (${qty}×)`,
+                          price: Math.round(upgradeCost * 100),
+                          quantity: 1,
+                        });
+                      }
+                    });
+                  } else {
+                    // Add individual game entries
+                    lineItems.forEach((li) => {
+                      items.push({
+                        name: `${li.opponent} (${li.qty}×)`,
+                        price: Math.round(li.price * 100),
+                        quantity: 1,
+                      });
+                    });
+                  }
+                  try {
+                    const response = await fetch('/api/createCheckout', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ items }),
+                    });
+                    const data = await response.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    } else {
+                      alert('Unable to initiate checkout. Please try again.');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert('An error occurred initiating checkout.');
+                  }
+                }}
+              >
+                Checkout
+              </button>
+            </div>
+
+            {/* Legal notice */}
+            <footer className="mt-6 text-xs text-gray-500">
+              <p>
+                No purchase necessary to enter or win. See Official Rules for
+                eligibility, alternative method of entry (AMOE), prize
+                information and details.
+              </p>
+            </footer>
+          </div>
+        );
+      }
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+
+    <!-- Beehiiv attribution script: this script should be loaded near the end of the body to capture attribution data for the subscribe form. -->
+    <script type="text/javascript" async src="https://subscribe-forms.beehiiv.com/attribution.js"></script>
+  </body>
+</html>

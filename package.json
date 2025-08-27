@@ -1,0 +1,8 @@
+{
+  "name": "fsu-raffle-subscribe",
+  "version": "1.0.0",
+  "description": "FSU raffle sweepstakes site with Beehiiv subscribe form and Stripe checkout.",
+  "dependencies": {
+    "stripe": "^12.14.1"
+  }
+}
