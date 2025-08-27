@@ -39,16 +39,24 @@
         { id: 'florida', date: '2025‑11‑29', opponent: 'Florida', home: false },
       ];
 
-      // Pricing configuration according to user requirements: single entry $4.99,
-      // triple entry $8.50, quintuple (5×) entry $11.11. 0 indicates no entry.
+      // Pricing configuration according to user requirements. These represent
+      // the cost for the three entry tiers (20×, 50×, 100×) per game. A tier
+      // value of 0 means no entry (free), 1 corresponds to 20 entries, 3 to 50
+      // entries and 5 to 100 entries. Each maps to its price in dollars.
       const PRICE_PER_GAME = {
         0: 0,
-        1: 4.99,
-        3: 8.5,
-        5: 11.11,
+        1: 4.99, // 20 entries
+        3: 8.5,  // 50 entries
+        5: 11.11 // 100 entries
       };
-      // Season pass price providing one entry per game【839994044875525†L54-L133】.
+      // Season pass price providing 20 entries per game for all 12 games.
       const SEASON_PASS_PRICE = 49.97;
+
+      // Map each tier value to a human‑friendly label and entry count. This
+      // enables displaying “20×”, “50×” or “100×” instead of raw numbers and
+      // computing total entries accurately.
+      const ENTRY_LABEL = { 0: '0', 1: '20×', 3: '50×', 5: '100×' };
+      const ENTRY_COUNT = { 0: 0, 1: 20, 3: 50, 5: 100 };
 
       // Helper for formatting currency
       const money = (n) => `$${n.toFixed(2)}`;
@@ -90,7 +98,9 @@
           });
         };
 
-        // Compute per-game line items when not on season pass
+        // Compute per-game line items when not on season pass. Each item
+        // includes the number of entries (20×/50×/100×) as a label and
+        // calculates its subtotal based on PRICE_PER_GAME.
         const lineItems = React.useMemo(() => {
           return GAMES.map((g) => {
             const qty = quantities[g.id] || 0;
@@ -116,16 +126,23 @@
           return lineItems.reduce((s, li) => s + li.subtotal, 0);
         }, [seasonPass, upgradesTotal, lineItems]);
 
-        // Total entries across all games
+        // Total entries across all games. Compute using ENTRY_COUNT to reflect
+        // 20×/50×/100× entries (not just a simple multiplier). When the season
+        // pass is active, baseline is 20 entries per game; additional entries
+        // are the difference between the selected tier and 20 entries.
         const totalEntries = React.useMemo(() => {
           if (seasonPass) {
-            return GAMES.length + GAMES.reduce((sum, g) => {
+            // Start with 20 entries per game for all games
+            let total = GAMES.length * ENTRY_COUNT[1];
+            GAMES.forEach((g) => {
               const qty = quantities[g.id] || 1;
-              // Extra entries above baseline of 1 when season pass active
-              return sum + (qty === 3 ? 2 : qty === 5 ? 4 : 0);
-            }, 0);
+              // Add the extra entries above 20 (baseline) for upgrades
+              total += Math.max(0, ENTRY_COUNT[qty] - ENTRY_COUNT[1]);
+            });
+            return total;
           }
-          return lineItems.reduce((sum, li) => sum + li.qty, 0);
+          // Without season pass, sum entries across selected games
+          return lineItems.reduce((sum, li) => sum + ENTRY_COUNT[li.qty], 0);
         }, [seasonPass, quantities, lineItems]);
 
         return (
@@ -145,7 +162,8 @@
             </header>
 
             {/* Beehiiv subscription form: inserted directly beneath the header to encourage visitors to join The Chief Brief newsletter. */}
-            <div className="mb-6">
+            <div className="mb-6 flex justify-center">
+              {/* Shrink the subscribe form by constraining its width and height. */}
               <iframe
                 src="https://subscribe-forms.beehiiv.com/406ff698-73b1-4c8d-9ab8-fccc25b5ea01"
                 className="beehiiv-embed"
@@ -154,14 +172,26 @@
                 scrolling="no"
                 style={{
                   width: '100%',
-                  height: '439px',
-                  margin: '0',
+                  maxWidth: '450px',
+                  height: '200px',
+                  margin: '0 auto',
                   borderRadius: '0',
                   backgroundColor: 'transparent',
                   boxShadow: '0 0 #0000',
-                  maxWidth: '100%',
                 }}
               ></iframe>
+            </div>
+
+            {/* Free entry notice: encourage readers to sign up for a free sweepstakes entry. */}
+            <div className="mb-6 bg-white border-l-4 border-[#782F40] p-4 rounded-lg shadow">
+              <p className="text-sm md:text-base text-gray-700">
+                <strong>Free entry via newsletter:</strong> Sign up for
+                <em> The Chief Brief</em> email newsletter and receive one (1)
+                free entry into the next upcoming game drawing at the time of
+                sign‑up. Details in the
+                {' '}
+                <a href="official-rules.html" className="underline text-[#782F40]">Official Rules</a>.
+              </p>
             </div>
             {/* Season Pass toggle styled card */}
             <div className="mb-6">
@@ -183,12 +213,18 @@
                   >
                     Season Pass — {money(SEASON_PASS_PRICE)}
                   </span>
-                  {seasonPass && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      Includes one entry per game. Additional entries on
-                      individual games incur only the upgrade cost.
-                    </p>
-                  )}
+              {seasonPass && (
+                <p className="text-xs text-gray-600 mt-1">
+                  Includes <strong>20 entries per game</strong> for all 12 games.
+                  Additional entries on individual games incur only the upgrade cost
+                  (for example, upgrading a game from 20× to 50× entries charges
+                  only the difference between the 50× and 20× price). Free entry
+                  is available via AMOE and newsletter sign‑up per the{' '}
+                  <a href="official-rules.html" className="underline text-[#782F40]">
+                    Official Rules
+                  </a>.
+                </p>
+              )}
                 </div>
               </div>
             </div>
@@ -220,8 +256,13 @@
                       >
                         −
                       </button>
-                      <span className="w-8 text-center font-mono text-lg">
-                        {qty === 0 && !seasonPass ? '0' : qty}
+                      <span className="w-10 text-center font-mono text-lg">
+                        {/* Display 20×/50×/100× labels instead of raw numbers. When
+                            there is no entry selected (qty=0) and the season pass
+                            isn’t active, show the "Ø" symbol for clarity. */}
+                        {qty === 0 && !seasonPass
+                          ? 'Ø'
+                          : ENTRY_LABEL[qty] || qty}
                       </span>
                       <button
                         className="flex items-center justify-center w-8 h-8 bg-[#782F40] text-[#CEB888] rounded-full font-bold"
@@ -306,10 +347,10 @@
                   }
                   // Build array of items for the checkout session. Prices must be in cents.
                   const items = [];
-                  if (seasonPass) {
-                    // Add season pass as a single item
+                    if (seasonPass) {
+                    // Add season pass as a single item (20 entries per game)
                     items.push({
-                      name: 'Season Pass (includes one entry per game)',
+                      name: 'Season Pass (20× per game)',
                       price: Math.round(SEASON_PASS_PRICE * 100),
                       quantity: 1,
                     });
@@ -322,7 +363,7 @@
                       );
                       if (upgradeCost > 0) {
                         items.push({
-                          name: `Upgrade: ${g.opponent} (${qty}×)`,
+                          name: `Upgrade: ${g.opponent} (${ENTRY_LABEL[qty]})`,
                           price: Math.round(upgradeCost * 100),
                           quantity: 1,
                         });
@@ -332,7 +373,7 @@
                     // Add individual game entries
                     lineItems.forEach((li) => {
                       items.push({
-                        name: `${li.opponent} (${li.qty}×)`,
+                        name: `${li.opponent} (${ENTRY_LABEL[li.qty]})`,
                         price: Math.round(li.price * 100),
                         quantity: 1,
                       });
@@ -348,7 +389,9 @@
                     if (data.url) {
                       window.location.href = data.url;
                     } else {
-                      alert('Unable to initiate checkout. Please try again.');
+                      // Show the server‑provided error if available; otherwise show a generic message.
+                      const msg = data.error || 'Unable to initiate checkout. Please try again.';
+                      alert(msg);
                     }
                   } catch (err) {
                     console.error(err);
