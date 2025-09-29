@@ -73,7 +73,7 @@
         5: 11.11 // 100 entries
       };
       // Season pass price providing 20 entries per game for all 12 games.
-      const SEASON_PASS_PRICE = 49.97;
+      const SEASON_PASS_PRICE = 50.00;
 
       // Map each tier value to a human‑friendly label and entry count. This
       // enables displaying “20×”, “50×” or “100×” instead of raw numbers and
@@ -255,18 +255,22 @@
                   >
                     Season Pass — {money(SEASON_PASS_PRICE)}
                   </span>
-              {seasonPass && (
-                <p className="text-xs text-gray-600 mt-1">
-                  Includes <strong>20 entries per game</strong> for all 12 games.
-                  Additional entries on individual games incur only the upgrade cost
-                  (for example, upgrading a game from 20× to 50× entries charges
-                  only the difference between the 50× and 20× price). Free entry
-                  is available via AMOE and newsletter sign‑up per the{' '}
-                  <a href="official-rules.html" className="underline text-[#782F40]">
-                    Official Rules
-                  </a>.
-                </p>
-              )}
+                  <p className="text-xs text-gray-600 mt-1">
+                    Includes <strong>20 entries per game</strong> for all 12 games.
+                    Additional entries on individual games incur only the upgrade cost
+                    (for example, upgrading a game from 20× to 50× entries charges
+                    only the difference between the 50× and 20× price). Purchasing a
+                    Season Pass also automatically enters you into our <a
+                    href="https://ticket-giveaway-miamifsu.replit.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-[#782F40]"
+                    >Miami promotion drawing</a> limited to just <strong>50 participants</strong>.
+                    Free entry is available via AMOE and newsletter sign‑up per the{' '}
+                    <a href="official-rules.html" className="underline text-[#782F40]">
+                      Official Rules
+                    </a>.
+                  </p>
                 </div>
               </div>
             </div>
