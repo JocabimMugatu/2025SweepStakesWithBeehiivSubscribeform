@@ -81,6 +81,9 @@
       const ENTRY_LABEL = { 0: '0', 1: '20×', 3: '50×', 5: '100×' };
       const ENTRY_COUNT = { 0: 0, 1: 20, 3: 50, 5: 100 };
 
+      // Identify games that have already occurred and should be disabled (grayed out and non‑interactive).
+      const DISABLED_IDS = ['alabama', 'etam', 'kent', 'virginia'];
+
       // Helper for formatting currency
       const money = (n) => `$${n.toFixed(2)}`;
 
@@ -216,6 +219,18 @@
                 <a href="official-rules.html" className="underline text-[#782F40]">Official Rules</a>.
               </p>
             </div>
+
+            {/* Season pass bonus drawing notice: highlight additional promotion for season pass buyers. */}
+            <div className="mb-6 bg-white border-l-4 border-[#CEB888] p-4 rounded-lg shadow">
+              <p className="text-sm md:text-base text-gray-700">
+                <strong>Season Pass bonus drawing:</strong> When you purchase a Season Pass, you&rsquo;ll
+                also be entered into a separate drawing limited to just 50 participants. This extra
+                promotion gives you another chance to win tickets. Read more about the Miami promotion{' '}
+                <a href="https://ticket-giveaway-miamifsu.replit.app/" target="_blank" rel="noopener noreferrer" className="underline text-[#782F40]">
+                  here
+                </a>.
+              </p>
+            </div>
             {/* Season Pass toggle styled card */}
             <div className="mb-6">
               <div
@@ -256,10 +271,15 @@
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {GAMES.map((game) => {
                 const qty = quantities[game.id] || (seasonPass ? 1 : 0);
+                // Determine whether this game has already occurred and should be grayed out/disabled.
+                const isDisabled = DISABLED_IDS.includes(game.id);
                 return (
                   <div
                     key={game.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border-l-4 border-[#CEB888] p-4 rounded-lg shadow hover:shadow-lg transition-shadow duration-200"
+                    className={
+                      `flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border-l-4 border-[#CEB888] p-4 rounded-lg shadow transition-shadow duration-200 ` +
+                      (isDisabled ? 'opacity-50 pointer-events-none cursor-default' : 'hover:shadow-lg')
+                    }
                   >
                     <div className="flex-1 mb-3 sm:mb-0">
                       <h3
@@ -274,8 +294,12 @@
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        className="flex items-center justify-center w-8 h-8 bg-[#CEB888] text-[#782F40] rounded-full font-bold"
-                        onClick={() => increment(game.id, -1)}
+                        className={
+                          `flex items-center justify-center w-8 h-8 bg-[#CEB888] text-[#782F40] rounded-full font-bold ` +
+                          (isDisabled ? 'cursor-not-allowed opacity-50' : '')
+                        }
+                        onClick={isDisabled ? undefined : () => increment(game.id, -1)}
+                        disabled={isDisabled}
                       >
                         −
                       </button>
@@ -288,8 +312,12 @@
                           : ENTRY_LABEL[qty] || qty}
                       </span>
                       <button
-                        className="flex items-center justify-center w-8 h-8 bg-[#782F40] text-[#CEB888] rounded-full font-bold"
-                        onClick={() => increment(game.id, 1)}
+                        className={
+                          `flex items-center justify-center w-8 h-8 bg-[#782F40] text-[#CEB888] rounded-full font-bold ` +
+                          (isDisabled ? 'cursor-not-allowed opacity-50' : '')
+                        }
+                        onClick={isDisabled ? undefined : () => increment(game.id, 1)}
+                        disabled={isDisabled}
                       >
                         +
                       </button>
